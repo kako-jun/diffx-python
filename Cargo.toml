@@ -16,7 +16,7 @@ crate-type = ["cdylib"]
 diffx-core = "0.6.1"
 
 # PyO3 for Python bindings
-pyo3 = { version = "0.22", features = ["extension-module"] }
+pyo3 = { version = "0.22", features = ["extension-module", "generate-import-lib"] }
 
 # Serialization
 serde = { version = "1.0", features = ["derive"] }
