@@ -1,5 +1,9 @@
 # diffx-python
 
+[![CI](https://github.com/kako-jun/diffx-python/actions/workflows/ci.yml/badge.svg)](https://github.com/kako-jun/diffx-python/actions/workflows/ci.yml)
+[![PyPI](https://img.shields.io/pypi/v/diffx-python.svg)](https://pypi.org/project/diffx-python/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 Python bindings for [diffx](https://github.com/kako-jun/diffx) - semantic diff for structured data (JSON, YAML, TOML, XML, INI, CSV). Powered by Rust via PyO3 for blazing fast performance.
 
 ## Installation
