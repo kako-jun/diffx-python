@@ -13,6 +13,7 @@ pip install diffx-python
 | Platform | Architecture |
 |----------|--------------|
 | Linux | x64 (glibc) |
+| Linux | x64 (musl/Alpine) |
 | Linux | ARM64 |
 | macOS | x64 (Intel) |
 | macOS | ARM64 (Apple Silicon) |
