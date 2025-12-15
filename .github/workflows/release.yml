@@ -64,7 +64,7 @@ jobs:
         run: pip install maturin
 
       - name: Build wheels
-        run: maturin build --release --target ${{ matrix.target }}
+        run: maturin build --release --target ${{ matrix.target }} -i python
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
