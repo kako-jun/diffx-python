@@ -1,56 +1,61 @@
-#![allow(clippy::useless_conversion)]
+//! Python bindings for diffx - semantic diffing of structured data files.
+//!
+//! This module provides Python bindings for the diffx-core library using PyO3.
 
-use diffx_core::{diff, DiffOptions, DiffResult, DiffxSpecificOptions, OutputFormat};
+#![allow(clippy::useless_conversion)]
+#![allow(clippy::uninlined_format_args)]
+
+use diffx_core::{
+    diff as core_diff, format_output as core_format_output, parse_csv as core_parse_csv,
+    parse_ini as core_parse_ini, parse_json as core_parse_json, parse_toml as core_parse_toml,
+    parse_xml as core_parse_xml, parse_yaml as core_parse_yaml, DiffOptions, DiffResult,
+    DiffxSpecificOptions, OutputFormat,
+};
 use pyo3::prelude::*;
 use pyo3::types::{PyAny, PyDict, PyList};
 use regex::Regex;
 use serde_json::Value;
 
+// ============================================================================
+// Main diff function
+// ============================================================================
+
 /// Unified diff function for Python
 ///
+/// Compare two Python objects (dicts, lists, or primitives) and return differences.
+///
 /// Args:
-///     old: Dict - The old JSON-like structure
-///     new: Dict - The new JSON-like structure
-///     **options: Various options for comparison
-///         epsilon: float - Numerical comparison tolerance
-///         array_id_key: str - Key to use for array element identification
-///         ignore_keys_regex: str - Regex pattern for keys to ignore
-///         path_filter: str - Only show differences in paths containing this string
-///         output_format: str - Output format ("diffx", "json", "yaml")
-///         show_unchanged: bool - Show unchanged values as well
-///         show_types: bool - Show type information in output
-///         use_memory_optimization: bool - Enable memory optimization for large files
-///         batch_size: int - Batch size for memory optimization
-///         context_lines: int - Number of context lines for diff output
-///         ignore_whitespace: bool - Ignore whitespace differences
-///         ignore_case: bool - Ignore case differences
-///         brief_mode: bool - Report only whether files differ
-///         quiet_mode: bool - Suppress normal output; return only exit status
+///     old: The old value (dict, list, or primitive)
+///     new: The new value (dict, list, or primitive)
+///     **kwargs: Optional parameters:
+///         epsilon (float): Numerical comparison tolerance
+///         array_id_key (str): Key to use for array element identification
+///         ignore_keys_regex (str): Regex pattern for keys to ignore
+///         path_filter (str): Only show differences in paths containing this string
+///         output_format (str): Output format ("diffx", "json", "yaml")
+///         ignore_whitespace (bool): Ignore whitespace differences
+///         ignore_case (bool): Ignore case differences
+///         brief_mode (bool): Report only whether files differ
+///         quiet_mode (bool): Suppress normal output
 ///
 /// Returns:
-///     List[Dict] - List of differences found
-#[pyfunction(name = "diff")]
+///     List[Dict]: List of differences found
+#[pyfunction]
 #[pyo3(signature = (old, new, **kwargs))]
-#[allow(clippy::useless_conversion)]
-fn diff_py(
+fn diff(
     py: Python,
     old: &Bound<'_, PyAny>,
     new: &Bound<'_, PyAny>,
     kwargs: Option<&Bound<'_, PyDict>>,
 ) -> PyResult<PyObject> {
-    // Convert Python objects to JSON Values
     let old_json = python_to_json_value(old)?;
     let new_json = python_to_json_value(new)?;
-
-    // Build options from kwargs
     let options = build_options_from_kwargs(kwargs)?;
 
-    // Perform diff
-    let results = diff(&old_json, &new_json, Some(&options)).map_err(|e| {
+    let results = core_diff(&old_json, &new_json, Some(&options)).map_err(|e| {
         PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!("Diff error: {e}"))
     })?;
 
-    // Convert results to Python objects
     let py_results = PyList::empty_bound(py);
     for result in results {
         let py_result = diff_result_to_python(py, &result)?;
@@ -61,18 +66,127 @@ fn diff_py(
 }
 
 // ============================================================================
-// REMOVED INDIVIDUAL PARSER FUNCTIONS - UNIFIED API DESIGN
+// Parser functions
 // ============================================================================
-// Individual parser functions have been removed to comply with unified API design.
-// Users should read files themselves and use the main diff() function.
-//
-// Example usage:
-//   import json
-//   old_data = json.load(open('old.json'))
-//   new_data = json.load(open('new.json'))
-//   results = diffx_python.diff(old_data, new_data, **options)
 
-// Helper functions for Python <-> Rust conversion
+/// Parse JSON string to Python object
+///
+/// Args:
+///     content: JSON string to parse
+///
+/// Returns:
+///     Parsed Python object (dict, list, or primitive)
+#[pyfunction]
+fn parse_json(py: Python, content: &str) -> PyResult<PyObject> {
+    let value = core_parse_json(content).map_err(|e| {
+        PyErr::new::<pyo3::exceptions::PyValueError, _>(format!("JSON parse error: {e}"))
+    })?;
+    json_value_to_python(py, &value)
+}
+
+/// Parse YAML string to Python object
+///
+/// Args:
+///     content: YAML string to parse
+///
+/// Returns:
+///     Parsed Python object (dict, list, or primitive)
+#[pyfunction]
+fn parse_yaml(py: Python, content: &str) -> PyResult<PyObject> {
+    let value = core_parse_yaml(content).map_err(|e| {
+        PyErr::new::<pyo3::exceptions::PyValueError, _>(format!("YAML parse error: {e}"))
+    })?;
+    json_value_to_python(py, &value)
+}
+
+/// Parse TOML string to Python object
+///
+/// Args:
+///     content: TOML string to parse
+///
+/// Returns:
+///     Parsed Python object (dict)
+#[pyfunction]
+fn parse_toml(py: Python, content: &str) -> PyResult<PyObject> {
+    let value = core_parse_toml(content).map_err(|e| {
+        PyErr::new::<pyo3::exceptions::PyValueError, _>(format!("TOML parse error: {e}"))
+    })?;
+    json_value_to_python(py, &value)
+}
+
+/// Parse CSV string to Python list of dicts
+///
+/// Args:
+///     content: CSV string to parse
+///
+/// Returns:
+///     List of dictionaries representing CSV rows
+#[pyfunction]
+fn parse_csv(py: Python, content: &str) -> PyResult<PyObject> {
+    let value = core_parse_csv(content).map_err(|e| {
+        PyErr::new::<pyo3::exceptions::PyValueError, _>(format!("CSV parse error: {e}"))
+    })?;
+    json_value_to_python(py, &value)
+}
+
+/// Parse INI string to Python dict
+///
+/// Args:
+///     content: INI string to parse
+///
+/// Returns:
+///     Parsed Python dictionary
+#[pyfunction]
+fn parse_ini(py: Python, content: &str) -> PyResult<PyObject> {
+    let value = core_parse_ini(content).map_err(|e| {
+        PyErr::new::<pyo3::exceptions::PyValueError, _>(format!("INI parse error: {e}"))
+    })?;
+    json_value_to_python(py, &value)
+}
+
+/// Parse XML string to Python dict
+///
+/// Args:
+///     content: XML string to parse
+///
+/// Returns:
+///     Parsed Python dictionary
+#[pyfunction]
+fn parse_xml(py: Python, content: &str) -> PyResult<PyObject> {
+    let value = core_parse_xml(content).map_err(|e| {
+        PyErr::new::<pyo3::exceptions::PyValueError, _>(format!("XML parse error: {e}"))
+    })?;
+    json_value_to_python(py, &value)
+}
+
+// ============================================================================
+// Format output function
+// ============================================================================
+
+/// Format diff results as string
+///
+/// Args:
+///     results: List of diff results from diff() function
+///     format: Output format ("diffx", "json", "yaml")
+///
+/// Returns:
+///     Formatted string output
+#[pyfunction]
+fn format_output(results: &Bound<'_, PyList>, format: &str) -> PyResult<String> {
+    let rust_results = python_results_to_rust(results)?;
+
+    let output_format = OutputFormat::parse_format(format).map_err(|e| {
+        PyErr::new::<pyo3::exceptions::PyValueError, _>(format!("Invalid format: {e}"))
+    })?;
+
+    core_format_output(&rust_results, output_format).map_err(|e| {
+        PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!("Format error: {e}"))
+    })
+}
+
+// ============================================================================
+// Helper functions
+// ============================================================================
 
 fn python_to_json_value(py_obj: &Bound<'_, PyAny>) -> PyResult<Value> {
     if py_obj.is_none() {
@@ -108,7 +222,6 @@ fn python_to_json_value(py_obj: &Bound<'_, PyAny>) -> PyResult<Value> {
     }
 }
 
-#[allow(clippy::useless_conversion)]
 fn json_value_to_python(py: Python, value: &Value) -> PyResult<PyObject> {
     match value {
         Value::Null => Ok(py.None()),
@@ -133,8 +246,8 @@ fn json_value_to_python(py: Python, value: &Value) -> PyResult<PyObject> {
         }
         Value::Object(obj) => {
             let py_dict = PyDict::new_bound(py);
-            for (key, value) in obj {
-                let py_value = json_value_to_python(py, value)?;
+            for (key, val) in obj {
+                let py_value = json_value_to_python(py, val)?;
                 py_dict.set_item(key, py_value)?;
             }
             Ok(py_dict.into())
@@ -142,7 +255,6 @@ fn json_value_to_python(py: Python, value: &Value) -> PyResult<PyObject> {
     }
 }
 
-#[allow(clippy::useless_conversion)]
 fn diff_result_to_python(py: Python, result: &DiffResult) -> PyResult<PyObject> {
     let py_dict = PyDict::new_bound(py);
 
@@ -174,11 +286,79 @@ fn diff_result_to_python(py: Python, result: &DiffResult) -> PyResult<PyObject> 
     Ok(py_dict.into())
 }
 
+fn python_results_to_rust(results: &Bound<'_, PyList>) -> PyResult<Vec<DiffResult>> {
+    let mut rust_results = Vec::new();
+
+    for item in results.iter() {
+        let dict = item.downcast::<PyDict>()?;
+
+        let diff_type: String = dict
+            .get_item("type")?
+            .ok_or_else(|| PyErr::new::<pyo3::exceptions::PyValueError, _>("Missing 'type' field"))?
+            .extract()?;
+
+        let path: String = dict
+            .get_item("path")?
+            .ok_or_else(|| PyErr::new::<pyo3::exceptions::PyValueError, _>("Missing 'path' field"))?
+            .extract()?;
+
+        let result = match diff_type.as_str() {
+            "Added" => {
+                let value = dict.get_item("value")?.ok_or_else(|| {
+                    PyErr::new::<pyo3::exceptions::PyValueError, _>("Missing 'value' field")
+                })?;
+                DiffResult::Added(path, python_to_json_value(&value)?)
+            }
+            "Removed" => {
+                let value = dict.get_item("value")?.ok_or_else(|| {
+                    PyErr::new::<pyo3::exceptions::PyValueError, _>("Missing 'value' field")
+                })?;
+                DiffResult::Removed(path, python_to_json_value(&value)?)
+            }
+            "Modified" => {
+                let old_value = dict.get_item("old_value")?.ok_or_else(|| {
+                    PyErr::new::<pyo3::exceptions::PyValueError, _>("Missing 'old_value' field")
+                })?;
+                let new_value = dict.get_item("new_value")?.ok_or_else(|| {
+                    PyErr::new::<pyo3::exceptions::PyValueError, _>("Missing 'new_value' field")
+                })?;
+                DiffResult::Modified(
+                    path,
+                    python_to_json_value(&old_value)?,
+                    python_to_json_value(&new_value)?,
+                )
+            }
+            "TypeChanged" => {
+                let old_value = dict.get_item("old_value")?.ok_or_else(|| {
+                    PyErr::new::<pyo3::exceptions::PyValueError, _>("Missing 'old_value' field")
+                })?;
+                let new_value = dict.get_item("new_value")?.ok_or_else(|| {
+                    PyErr::new::<pyo3::exceptions::PyValueError, _>("Missing 'new_value' field")
+                })?;
+                DiffResult::TypeChanged(
+                    path,
+                    python_to_json_value(&old_value)?,
+                    python_to_json_value(&new_value)?,
+                )
+            }
+            _ => {
+                return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(format!(
+                    "Invalid diff type: {}",
+                    diff_type
+                )))
+            }
+        };
+
+        rust_results.push(result);
+    }
+
+    Ok(rust_results)
+}
+
 fn build_options_from_kwargs(kwargs: Option<&Bound<'_, PyDict>>) -> PyResult<DiffOptions> {
     let mut options = DiffOptions::default();
 
     if let Some(kwargs) = kwargs {
-        // Core options
         if let Some(epsilon) = kwargs.get_item("epsilon")? {
             options.epsilon = Some(epsilon.extract::<f64>()?);
         }
@@ -207,22 +387,6 @@ fn build_options_from_kwargs(kwargs: Option<&Bound<'_, PyDict>>) -> PyResult<Dif
                 ))
             })?;
             options.output_format = Some(format);
-        }
-
-        if let Some(show_unchanged) = kwargs.get_item("show_unchanged")? {
-            options.show_unchanged = Some(show_unchanged.extract::<bool>()?);
-        }
-
-        if let Some(show_types) = kwargs.get_item("show_types")? {
-            options.show_types = Some(show_types.extract::<bool>()?);
-        }
-
-        if let Some(use_memory_optimization) = kwargs.get_item("use_memory_optimization")? {
-            options.use_memory_optimization = Some(use_memory_optimization.extract::<bool>()?);
-        }
-
-        if let Some(batch_size) = kwargs.get_item("batch_size")? {
-            options.batch_size = Some(batch_size.extract::<usize>()?);
         }
 
         // diffx-specific options
@@ -257,14 +421,32 @@ fn build_options_from_kwargs(kwargs: Option<&Bound<'_, PyDict>>) -> PyResult<Dif
     Ok(options)
 }
 
-/// Python module for diffx - UNIFIED API DESIGN
+// ============================================================================
+// Python module
+// ============================================================================
+
+/// diffx-python: Semantic diffing for structured data files
+///
+/// Provides high-performance comparison of JSON, YAML, TOML, CSV, INI, and XML files.
+/// Powered by Rust for blazing fast performance.
 #[pymodule]
 fn diffx_python(m: &Bound<'_, PyModule>) -> PyResult<()> {
-    // Only expose the main diff function - unified API design
-    m.add_function(wrap_pyfunction!(diff_py, m)?)?;
+    // Main diff function
+    m.add_function(wrap_pyfunction!(diff, m)?)?;
 
-    // Add version
-    m.add("__version__", "0.6.0")?;
+    // Parser functions
+    m.add_function(wrap_pyfunction!(parse_json, m)?)?;
+    m.add_function(wrap_pyfunction!(parse_yaml, m)?)?;
+    m.add_function(wrap_pyfunction!(parse_toml, m)?)?;
+    m.add_function(wrap_pyfunction!(parse_csv, m)?)?;
+    m.add_function(wrap_pyfunction!(parse_ini, m)?)?;
+    m.add_function(wrap_pyfunction!(parse_xml, m)?)?;
+
+    // Format output function
+    m.add_function(wrap_pyfunction!(format_output, m)?)?;
+
+    // Version
+    m.add("__version__", "0.6.1")?;
 
     Ok(())
 }

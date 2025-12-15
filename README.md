@@ -1,6 +1,6 @@
 # diffx-python
 
-Python wrapper for the `diffx` CLI tool - semantic diff for structured data.
+Python bindings for [diffx](https://github.com/kako-jun/diffx) - semantic diff for structured data (JSON, YAML, TOML, XML, INI, CSV). Powered by Rust via PyO3 for blazing fast performance.
 
 ## Installation
 
@@ -8,85 +8,155 @@ Python wrapper for the `diffx` CLI tool - semantic diff for structured data.
 pip install diffx-python
 ```
 
-The `diffx` binary is automatically included in the wheel - no additional downloads required! This package uses [maturin](https://github.com/PyO3/maturin) to embed the native binary directly in the Python wheel, similar to tools like `ruff`.
+### Supported Platforms
+
+| Platform | Architecture |
+|----------|--------------|
+| Linux | x64 (glibc) |
+| Linux | x64 (musl/Alpine) |
+| Linux | ARM64 |
+| macOS | x64 (Intel) |
+| macOS | ARM64 (Apple Silicon) |
+| Windows | x64 |
 
 ## Usage
 
+### Basic Diff
+
 ```python
-import diffx_python
+import diffx_python as diffx
 
-# Compare two JSON files
-result = diffx.diff('file1.json', 'file2.json')
-print(result)
+old = {"name": "Alice", "age": 30}
+new = {"name": "Alice", "age": 31, "city": "Tokyo"}
 
-# Get structured output as JSON
-json_result = diffx.diff(
-    'config1.yaml', 
-    'config2.yaml',
-    diffx.DiffOptions(format='yaml', output='json')
-)
+results = diffx.diff(old, new)
 
-for diff_item in json_result:
-    if diff_item.added:
-        print(f"Added: {diff_item.added}")
-    elif diff_item.modified:
-        print(f"Modified: {diff_item.modified}")
+for change in results:
+    print(f"{change['type']}: {change['path']}")
+    # Modified: age
+    # Added: city
+```
 
-# Compare directory trees (automatic recursive detection)
-dir_result = diffx.diff(
-    'dir1/', 
-    'dir2/',
-    diffx.DiffOptions(path='config')
-)
+### With Options
 
-# Compare strings directly
-json1 = '{"name": "Alice", "age": 30}'
-json2 = '{"name": "Alice", "age": 31}'
-string_result = diffx.diff_string(
-    json1, json2, 'json',
-    diffx.DiffOptions(output='json')
+```python
+results = diffx.diff(data1, data2,
+    epsilon=0.001,                      # Tolerance for float comparison
+    array_id_key='id',                  # Match array elements by ID
+    ignore_keys_regex='timestamp|updatedAt',  # Ignore keys matching regex
+    path_filter='user',                 # Only show diffs in paths containing "user"
+    ignore_case=True,                   # Ignore case differences
+    ignore_whitespace=True,             # Ignore whitespace differences
 )
 ```
 
+### Parsers
 
-## Features
+Parse various formats to Python objects:
 
-- **Multiple formats**: JSON, YAML, TOML, XML, INI, CSV
-- **Smart diffing**: Understands structure, not just text
-- **Flexible output**: CLI, JSON, YAML formats
-- **Advanced options**: 
-  - Regex-based key filtering
-  - Floating-point tolerance
-  - Array element identification
-  - Path-based filtering
-- **Cross-platform**: Native binary embedded in platform-specific wheels
+```python
+import diffx_python as diffx
 
-## Key Benefits
+json_obj = diffx.parse_json('{"name": "Alice"}')
+yaml_obj = diffx.parse_yaml('name: Alice\nage: 30')
+toml_obj = diffx.parse_toml('name = "Alice"')
+csv_list = diffx.parse_csv('name,age\nAlice,30')
+ini_obj = diffx.parse_ini('[user]\nname = Alice')
+xml_obj = diffx.parse_xml('<user><name>Alice</name></user>')
+```
 
-- **🚀 Zero setup**: No external downloads or binary management
-- **📦 Self-contained**: Everything needed is in the wheel
-- **⚡ Fast installation**: No network dependencies after `pip install`
-- **🔒 Secure**: No runtime downloads from external sources
-- **🌐 Offline-ready**: Works in air-gapped environments
+### Format Output
+
+```python
+import diffx_python as diffx
+
+results = diffx.diff(old, new)
+print(diffx.format_output(results, 'json'))   # JSON format
+print(diffx.format_output(results, 'yaml'))   # YAML format
+print(diffx.format_output(results, 'diffx'))  # diffx format
+```
+
+### File Comparison
+
+```python
+import diffx_python as diffx
+
+# Compare files (auto-detects format from extension)
+results = diffx.diff_files('old.json', 'new.json')
+results = diffx.diff_files('config1.yaml', 'config2.yaml', epsilon=0.1)
+
+# Compare strings
+json1 = '{"name": "Alice", "age": 30}'
+json2 = '{"name": "Alice", "age": 31}'
+results = diffx.diff_strings(json1, json2, 'json')
+```
+
+## API Reference
+
+### `diff(old, new, **kwargs)`
+
+Compare two values and return differences.
+
+**Options (kwargs):**
+| Option | Type | Description |
+|--------|------|-------------|
+| `epsilon` | float | Tolerance for floating-point comparisons |
+| `array_id_key` | str | Key to identify array elements |
+| `ignore_keys_regex` | str | Regex pattern for keys to ignore |
+| `path_filter` | str | Only show diffs in matching paths |
+| `output_format` | str | Output format ("diffx", "json", "yaml") |
+| `ignore_whitespace` | bool | Ignore whitespace differences |
+| `ignore_case` | bool | Ignore case differences |
+| `brief_mode` | bool | Report only whether objects differ |
+| `quiet_mode` | bool | Suppress normal output |
+
+**Returns:** List of diff results:
+```python
+# For Added/Removed:
+{"type": "Added", "path": "key", "value": ...}
+{"type": "Removed", "path": "key", "value": ...}
+
+# For Modified/TypeChanged:
+{"type": "Modified", "path": "key", "old_value": ..., "new_value": ...}
+{"type": "TypeChanged", "path": "key", "old_value": ..., "new_value": ...}
+```
+
+### Parsers
+
+- `parse_json(content: str) -> Any`
+- `parse_yaml(content: str) -> Any`
+- `parse_toml(content: str) -> dict`
+- `parse_csv(content: str) -> list[dict]`
+- `parse_ini(content: str) -> dict`
+- `parse_xml(content: str) -> dict`
+
+### Utility Functions
+
+- `format_output(results: list, format: str) -> str` - Format diff results as string
+- `diff_files(file1: str, file2: str, **kwargs) -> list` - Compare two files
+- `diff_strings(str1: str, str2: str, format: str, **kwargs) -> list` - Compare two strings
+
+### Exception
+
+- `DiffError` - Raised when diff operations fail
 
 ## Development
 
-To install in development mode:
-
 ```bash
-pip install -e .[dev]
-```
+# Setup
+uv sync --all-extras
 
-## Verification
+# Build
+uv run maturin develop
 
-Verify the installation:
+# Test
+uv run pytest -v
 
-```python
-import diffx_python
-print("diffx available:", diffx.is_diffx_available())
-print("Version:", diffx.__version__)
+# Format & Lint
+cargo fmt --check
+cargo clippy
 ```
 
 ## License
 
-This project is licensed under the MIT License.
+MIT
