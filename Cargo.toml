@@ -13,7 +13,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 # Core diffx functionality
-diffx-core = "0.6.1"
+diffx-core = "0.7"
 
 # PyO3 for Python bindings
 pyo3 = { version = "0.22", features = ["extension-module", "generate-import-lib"] }
