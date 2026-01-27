@@ -3,7 +3,7 @@ requires = ["maturin>=1.0,<2.0"]
 build-backend = "maturin"
 
 [project]
-name = "diffx-python"
+name = "diffx"
 version = "0.6.1"
 description = "Python bindings for diffx - semantic diffing of JSON, YAML, TOML, XML, INI, and CSV files. Powered by Rust for blazing fast performance."
 readme = "README.md"
