@@ -4,15 +4,15 @@ from pathlib import Path
 
 import pytest
 
-# Add the parent directory to sys.path to import diffx_python
+# Add the parent directory to sys.path to import diffx
 # This assumes we're running tests from the tests directory
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 try:
-    import diffx_python
+    import diffx
 except ImportError:
     # If the module is not built yet, skip tests
-    pytest.skip("diffx_python module not built", allow_module_level=True)
+    pytest.skip("diffx module not built", allow_module_level=True)
 
 # ============================================================================
 # TEST FIXTURES - Shared with Core Tests
@@ -122,7 +122,7 @@ class TestUnifiedAPI:
         old = {"name": "Alice", "age": 30}
         new = {"name": "Alice", "age": 31}
 
-        results = diffx_python.diff(old, new)
+        results = diffx.diff(old, new)
 
         assert len(results) == 1
         result = results[0]
@@ -135,7 +135,7 @@ class TestUnifiedAPI:
         old = {"name": "Alice"}
         new = {"name": "Alice", "age": 30}
 
-        results = diffx_python.diff(old, new)
+        results = diffx.diff(old, new)
 
         assert len(results) == 1
         result = results[0]
@@ -147,7 +147,7 @@ class TestUnifiedAPI:
         old = {"name": "Alice", "age": 30}
         new = {"name": "Alice"}
 
-        results = diffx_python.diff(old, new)
+        results = diffx.diff(old, new)
 
         assert len(results) == 1
         result = results[0]
@@ -159,7 +159,7 @@ class TestUnifiedAPI:
         old = {"value": 123}
         new = {"value": "123"}
 
-        results = diffx_python.diff(old, new)
+        results = diffx.diff(old, new)
 
         assert len(results) == 1
         result = results[0]
@@ -172,7 +172,7 @@ class TestUnifiedAPI:
         old = {"name": "Alice", "age": 30}
         new = {"name": "Alice", "age": 30}
 
-        results = diffx_python.diff(old, new)
+        results = diffx.diff(old, new)
 
         assert len(results) == 0
 
@@ -190,18 +190,18 @@ class TestOptionsHandling:
         new = {"value": 1.001}
 
         # Within epsilon - no differences
-        results = diffx_python.diff(old, new, epsilon=0.01)
+        results = diffx.diff(old, new, epsilon=0.01)
         assert len(results) == 0
 
         # Outside epsilon - should detect difference
-        results = diffx_python.diff(old, new, epsilon=0.0001)
+        results = diffx.diff(old, new, epsilon=0.0001)
         assert len(results) == 1
 
     def test_diff_with_array_id_key(self):
         old = {"users": [{"id": 1, "name": "Alice"}, {"id": 2, "name": "Bob"}]}
         new = {"users": [{"id": 2, "name": "Bob"}, {"id": 1, "name": "Alice Updated"}]}
 
-        results = diffx_python.diff(old, new, array_id_key="id")
+        results = diffx.diff(old, new, array_id_key="id")
 
         # Should detect modification of Alice's name, not array reordering
         assert len(results) == 1
@@ -215,7 +215,7 @@ class TestOptionsHandling:
         old = {"data": "important", "timestamp": "2023-01-01", "debug_info": "old"}
         new = {"data": "important", "timestamp": "2023-01-02", "debug_info": "new"}
 
-        results = diffx_python.diff(old, new, ignore_keys_regex=r"^(timestamp|debug_)")
+        results = diffx.diff(old, new, ignore_keys_regex=r"^(timestamp|debug_)")
         assert len(results) == 0  # All changes ignored
 
     def test_diff_with_path_filter(self):
@@ -223,8 +223,8 @@ class TestOptionsHandling:
         new = {"config": {"value": 10}, "metadata": {"value": 20}}
 
         # Test path filter - get all results first
-        all_results = diffx_python.diff(old, new)
-        filtered_results = diffx_python.diff(old, new, path_filter="config")
+        all_results = diffx.diff(old, new)
+        filtered_results = diffx.diff(old, new, path_filter="config")
 
         # Now it should properly filter
         assert isinstance(filtered_results, list)
@@ -233,7 +233,7 @@ class TestOptionsHandling:
         assert filtered_results[0]["path"] == "config.value"
 
         # Test with a more specific filter that should match
-        exact_results = diffx_python.diff(old, new, path_filter="config.value")
+        exact_results = diffx.diff(old, new, path_filter="config.value")
         assert isinstance(exact_results, list)
         assert len(exact_results) == 1  # Exact match
         assert exact_results[0]["path"] == "config.value"
@@ -244,7 +244,7 @@ class TestOptionsHandling:
 
         # Test different output formats
         for output_format in ["diffx", "json", "yaml"]:
-            results = diffx_python.diff(old, new, output_format=output_format)
+            results = diffx.diff(old, new, output_format=output_format)
             assert len(results) == 1
 
     def test_diff_with_diffx_specific_options(self):
@@ -252,11 +252,11 @@ class TestOptionsHandling:
         new = {"text": "HELLO WORLD"}
 
         # Case insensitive - should find no differences
-        results = diffx_python.diff(old, new, ignore_case=True)
+        results = diffx.diff(old, new, ignore_case=True)
         assert len(results) == 0
 
         # Case sensitive - should find difference
-        results = diffx_python.diff(old, new, ignore_case=False)
+        results = diffx.diff(old, new, ignore_case=False)
         assert len(results) == 1
 
     def test_diff_with_ignore_whitespace(self):
@@ -264,11 +264,11 @@ class TestOptionsHandling:
         new = {"text": "HelloWorld"}
 
         # Ignore whitespace - no differences
-        results = diffx_python.diff(old, new, ignore_whitespace=True)
+        results = diffx.diff(old, new, ignore_whitespace=True)
         assert len(results) == 0
 
         # Don't ignore whitespace - should find difference
-        results = diffx_python.diff(old, new, ignore_whitespace=False)
+        results = diffx.diff(old, new, ignore_whitespace=False)
         assert len(results) == 1
 
 
@@ -294,7 +294,7 @@ class TestPythonTypeConversion:
         }
 
         # Should not raise any conversion errors
-        results = diffx_python.diff(test_data, test_data)
+        results = diffx.diff(test_data, test_data)
         assert len(results) == 0
 
     def test_python_container_types(self):
@@ -308,7 +308,7 @@ class TestPythonTypeConversion:
         }
 
         # Should not raise any conversion errors
-        results = diffx_python.diff(test_data, test_data)
+        results = diffx.diff(test_data, test_data)
         assert len(results) == 0
 
     def test_large_python_numbers(self):
@@ -316,7 +316,7 @@ class TestPythonTypeConversion:
         old = {"big_int": 2**63 - 1, "big_float": 1.7976931348623157e308}
         new = {"big_int": 2**63 - 2, "big_float": 1.7976931348623157e307}
 
-        results = diffx_python.diff(old, new)
+        results = diffx.diff(old, new)
         assert len(results) == 2  # Both should be detected as changes
 
     def test_python_dict_keys_types(self):
@@ -325,7 +325,7 @@ class TestPythonTypeConversion:
         old = {"valid_key": "value"}
         new = {"valid_key": "value", "new_key": "new_value"}
 
-        results = diffx_python.diff(old, new)
+        results = diffx.diff(old, new)
         assert len(results) == 1
         assert results[0]["type"] == "Added"
 
@@ -342,7 +342,7 @@ class TestArrayHandling:
         old = [1, 2, 3]
         new = [1, 3, 4]
 
-        results = diffx_python.diff(old, new)
+        results = diffx.diff(old, new)
 
         assert len(results) == 2  # Changes at indices 1 and 2
 
@@ -350,7 +350,7 @@ class TestArrayHandling:
         old = [{"id": "a", "value": 1}, {"id": "b", "value": 2}]
         new = [{"id": "b", "value": 20}, {"id": "c", "value": 3}]
 
-        results = diffx_python.diff(old, new, array_id_key="id")
+        results = diffx.diff(old, new, array_id_key="id")
 
         # Should detect: removed 'a', modified 'b', added 'c'
         assert len(results) == 3
@@ -367,7 +367,7 @@ class TestArrayHandling:
             {"id": "c", "value": 4},
         ]
 
-        results = diffx_python.diff(old, new, array_id_key="id")
+        results = diffx.diff(old, new, array_id_key="id")
 
         # Should handle both ID-based and index-based comparisons
         assert len(results) > 0
@@ -385,7 +385,7 @@ class TestComplexStructures:
         old = TestFixtures.nested_object_old()
         new = TestFixtures.nested_object_new()
 
-        results = diffx_python.diff(old, new)
+        results = diffx.diff(old, new)
 
         # Should find multiple changes in nested structure
         assert len(results) > 1
@@ -405,7 +405,7 @@ class TestComplexStructures:
             old_data[f"key_{i}"] = i
             new_data[f"key_{i}"] = i + 1
 
-        results = diffx_python.diff(old_data, new_data)
+        results = diffx.diff(old_data, new_data)
         assert len(results) == 100
 
 
@@ -422,14 +422,14 @@ class TestErrorHandling:
         new = {"test": "value2"}
 
         with pytest.raises(Exception):  # Should raise ValueError for invalid regex
-            diffx_python.diff(old, new, ignore_keys_regex="[invalid_regex")
+            diffx.diff(old, new, ignore_keys_regex="[invalid_regex")
 
     def test_invalid_output_format(self):
         old = {"test": "value"}
         new = {"test": "value2"}
 
         with pytest.raises(Exception):  # Should raise ValueError for invalid format
-            diffx_python.diff(old, new, output_format="invalid_format")
+            diffx.diff(old, new, output_format="invalid_format")
 
     def test_unsupported_python_types(self):
         """Test handling of complex Python types that can't be converted"""
@@ -440,7 +440,7 @@ class TestErrorHandling:
         new = {"simple": "value"}
 
         # These should work fine
-        results = diffx_python.diff(old, new)
+        results = diffx.diff(old, new)
         assert len(results) == 0
 
 
@@ -457,7 +457,7 @@ class TestIntegration:
         old = TestFixtures.array_with_ids_old()
         new = TestFixtures.array_with_ids_new()
 
-        results = diffx_python.diff(old, new, array_id_key="id", output_format="json")
+        results = diffx.diff(old, new, array_id_key="id", output_format="json")
 
         # Should detect changes in the array with ID-based comparison
         assert len(results) > 0
@@ -478,7 +478,7 @@ class TestIntegration:
 
         for test_data in test_cases:
             # Diff with itself should produce no changes
-            results = diffx_python.diff(test_data, test_data)
+            results = diffx.diff(test_data, test_data)
             assert len(results) == 0, f"Self-diff should be empty for {test_data}"
 
     def test_backwards_compatibility_workflow(self):
@@ -490,7 +490,7 @@ class TestIntegration:
         old_data = json.loads(old_json_str)
         new_data = json.loads(new_json_str)
 
-        results = diffx_python.diff(old_data, new_data)
+        results = diffx.diff(old_data, new_data)
 
         assert len(results) == 2  # name and version changed
 
@@ -516,7 +516,7 @@ class TestPerformance:
         import time
 
         start_time = time.time()
-        results = diffx_python.diff(old, new, array_id_key="id")
+        results = diffx.diff(old, new, array_id_key="id")
         end_time = time.time()
 
         assert len(results) == 1000  # All items should be modified
@@ -538,7 +538,7 @@ class TestPerformance:
         import time
 
         start_time = time.time()
-        results = diffx_python.diff(old, new)
+        results = diffx.diff(old, new)
         end_time = time.time()
 
         assert len(results) == 1  # Should find the single deep change

@@ -17,13 +17,12 @@ pip package                   ←  maturinでwheelを生成
 ```
 diffx-python/
 ├── src/lib.rs              # PyO3バインディング実装
-├── src/diffx_python/       # Pythonモジュール
-│   └── __init__.py         # re-export + ユーティリティ関数
+├── python/diffx/           # Pythonモジュール
+│   └── __init__.py         # re-export from ._diffx
 ├── Cargo.toml              # diffx-core依存（crates.io版）
 ├── pyproject.toml          # maturin設定 + pytest設定
 ├── tests/                  # pytestテスト
-│   ├── __init__.py
-│   └── test_unified_api.py
+│   └── test_*.py
 └── .github/workflows/
     ├── ci.yml              # push/PR → fmt + clippy + build + test
     └── release.yml         # タグ → マルチプラットフォームビルド + Release作成
@@ -72,9 +71,9 @@ uv run pre-commit run --all-files
 
 1. `pyproject.toml`、`Cargo.toml`、`src/lib.rs`のバージョンを更新
 2. コミット & プッシュ
-3. `git tag v0.6.1 && git push origin v0.6.1`
+3. `git tag v0.7.0 && git push origin v0.7.0`
 4. GitHub Actionsがビルド → Release作成 → wheelを添付
-5. `pip install diffx-python`（PyPIから）または wheelから直接インストール
+5. `pip install diffx`（PyPIから）または wheelから直接インストール
 
 ## API
 

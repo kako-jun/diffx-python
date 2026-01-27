@@ -5,41 +5,41 @@ based on the diffx-core specification and diffx-js parity.
 """
 
 import pytest
-import diffx_python
+import diffx
 
 
 class TestParseJson:
     """JSON parser tests - based on diffx-core spec."""
 
     def test_parses_simple_object(self):
-        result = diffx_python.parse_json('{"name": "Alice", "age": 30}')
+        result = diffx.parse_json('{"name": "Alice", "age": 30}')
         assert result == {"name": "Alice", "age": 30}
 
     def test_parses_array(self):
-        result = diffx_python.parse_json("[1, 2, 3]")
+        result = diffx.parse_json("[1, 2, 3]")
         assert result == [1, 2, 3]
 
     def test_parses_nested_structure(self):
-        result = diffx_python.parse_json('{"user": {"profile": {"age": 30}}}')
+        result = diffx.parse_json('{"user": {"profile": {"age": 30}}}')
         assert result["user"]["profile"]["age"] == 30
 
     def test_parses_primitives(self):
-        assert diffx_python.parse_json("null") is None
-        assert diffx_python.parse_json("true") is True
-        assert diffx_python.parse_json("false") is False
-        assert diffx_python.parse_json("42") == 42
-        assert diffx_python.parse_json('"hello"') == "hello"
+        assert diffx.parse_json("null") is None
+        assert diffx.parse_json("true") is True
+        assert diffx.parse_json("false") is False
+        assert diffx.parse_json("42") == 42
+        assert diffx.parse_json('"hello"') == "hello"
 
     def test_raises_on_invalid_json(self):
         with pytest.raises(Exception):
-            diffx_python.parse_json("invalid json")
+            diffx.parse_json("invalid json")
 
 
 class TestParseYaml:
     """YAML parser tests - based on diffx-core spec."""
 
     def test_parses_simple_yaml(self):
-        result = diffx_python.parse_yaml("name: Alice\nage: 30")
+        result = diffx.parse_yaml("name: Alice\nage: 30")
         assert result["name"] == "Alice"
         assert result["age"] == 30
 
@@ -49,7 +49,7 @@ user:
   profile:
     age: 30
 """
-        result = diffx_python.parse_yaml(yaml)
+        result = diffx.parse_yaml(yaml)
         assert result["user"]["profile"]["age"] == 30
 
     def test_parses_yaml_arrays(self):
@@ -59,7 +59,7 @@ items:
   - 2
   - 3
 """
-        result = diffx_python.parse_yaml(yaml)
+        result = diffx.parse_yaml(yaml)
         assert result["items"] == [1, 2, 3]
 
 
@@ -67,7 +67,7 @@ class TestParseToml:
     """TOML parser tests - based on diffx-core spec."""
 
     def test_parses_simple_toml(self):
-        result = diffx_python.parse_toml('name = "Alice"\nage = 30')
+        result = diffx.parse_toml('name = "Alice"\nage = 30')
         assert result["name"] == "Alice"
         assert result["age"] == 30
 
@@ -79,12 +79,12 @@ name = "Alice"
 [user.profile]
 age = 30
 """
-        result = diffx_python.parse_toml(toml)
+        result = diffx.parse_toml(toml)
         assert result["user"]["name"] == "Alice"
         assert result["user"]["profile"]["age"] == 30
 
     def test_parses_toml_arrays(self):
-        result = diffx_python.parse_toml("items = [1, 2, 3]")
+        result = diffx.parse_toml("items = [1, 2, 3]")
         assert result["items"] == [1, 2, 3]
 
 
@@ -93,7 +93,7 @@ class TestParseCsv:
 
     def test_parses_csv_with_headers(self):
         csv = "name,age\nAlice,30\nBob,25"
-        result = diffx_python.parse_csv(csv)
+        result = diffx.parse_csv(csv)
 
         assert isinstance(result, list)
         assert len(result) == 2
@@ -102,7 +102,7 @@ class TestParseCsv:
 
     def test_parses_quoted_csv(self):
         csv = 'name,description\nAlice,"Hello, World"'
-        result = diffx_python.parse_csv(csv)
+        result = diffx.parse_csv(csv)
         assert result[0]["description"] == "Hello, World"
 
 
@@ -115,7 +115,7 @@ class TestParseIni:
 name = Alice
 age = 30
 """
-        result = diffx_python.parse_ini(ini)
+        result = diffx.parse_ini(ini)
         assert result["user"]["name"] == "Alice"
         assert result["user"]["age"] == "30"  # INI values are strings
 
@@ -127,7 +127,7 @@ host = localhost
 [cache]
 enabled = true
 """
-        result = diffx_python.parse_ini(ini)
+        result = diffx.parse_ini(ini)
         assert result["database"]["host"] == "localhost"
         assert result["cache"]["enabled"] == "true"
 
@@ -136,37 +136,37 @@ class TestParseXml:
     """XML parser tests - based on diffx-core spec."""
 
     def test_parses_simple_xml(self):
-        result = diffx_python.parse_xml("<user><name>Alice</name></user>")
+        result = diffx.parse_xml("<user><name>Alice</name></user>")
         assert result is not None
 
     def test_raises_on_invalid_xml(self):
         with pytest.raises(Exception):
-            diffx_python.parse_xml("<invalid")
+            diffx.parse_xml("<invalid")
 
 
 class TestParserDiffIntegration:
     """Integration: parser + diff."""
 
     def test_diff_parsed_json(self):
-        obj1 = diffx_python.parse_json('{"name": "Alice", "age": 30}')
-        obj2 = diffx_python.parse_json('{"name": "Alice", "age": 31}')
-        results = diffx_python.diff(obj1, obj2)
+        obj1 = diffx.parse_json('{"name": "Alice", "age": 30}')
+        obj2 = diffx.parse_json('{"name": "Alice", "age": 31}')
+        results = diffx.diff(obj1, obj2)
 
         assert len(results) == 1
         assert results[0]["path"] == "age"
 
     def test_diff_parsed_yaml(self):
-        obj1 = diffx_python.parse_yaml("name: Alice\nage: 30")
-        obj2 = diffx_python.parse_yaml("name: Alice\nage: 31")
-        results = diffx_python.diff(obj1, obj2)
+        obj1 = diffx.parse_yaml("name: Alice\nage: 30")
+        obj2 = diffx.parse_yaml("name: Alice\nage: 31")
+        results = diffx.diff(obj1, obj2)
 
         assert len(results) == 1
         assert results[0]["path"] == "age"
 
     def test_diff_parsed_toml(self):
-        obj1 = diffx_python.parse_toml('name = "Alice"\nage = 30')
-        obj2 = diffx_python.parse_toml('name = "Alice"\nage = 31')
-        results = diffx_python.diff(obj1, obj2)
+        obj1 = diffx.parse_toml('name = "Alice"\nage = 30')
+        obj2 = diffx.parse_toml('name = "Alice"\nage = 31')
+        results = diffx.diff(obj1, obj2)
 
         assert len(results) == 1
         assert results[0]["path"] == "age"

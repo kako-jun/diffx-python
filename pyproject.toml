@@ -4,7 +4,7 @@ build-backend = "maturin"
 
 [project]
 name = "diffx"
-version = "0.6.1"
+version = "0.7.0"
 description = "Python bindings for diffx - semantic diffing of JSON, YAML, TOML, XML, INI, and CSV files. Powered by Rust for blazing fast performance."
 readme = "README.md"
 license = "MIT"
@@ -68,6 +68,8 @@ dev = [
 bindings = "pyo3"
 find-interpreter = true
 compatibility = "manylinux2014"
+python-source = "python"
+module-name = "diffx._diffx"
 
 [tool.ruff]
 line-length = 88

@@ -430,7 +430,7 @@ fn build_options_from_kwargs(kwargs: Option<&Bound<'_, PyDict>>) -> PyResult<Dif
 /// Provides high-performance comparison of JSON, YAML, TOML, CSV, INI, and XML files.
 /// Powered by Rust for blazing fast performance.
 #[pymodule]
-fn diffx_python(m: &Bound<'_, PyModule>) -> PyResult<()> {
+fn _diffx(m: &Bound<'_, PyModule>) -> PyResult<()> {
     // Main diff function
     m.add_function(wrap_pyfunction!(diff, m)?)?;
 
@@ -446,7 +446,7 @@ fn diffx_python(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(format_output, m)?)?;
 
     // Version
-    m.add("__version__", "0.6.1")?;
+    m.add("__version__", "0.7.0")?;
 
     Ok(())
 }

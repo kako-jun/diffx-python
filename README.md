@@ -28,7 +28,7 @@ pip install diffx
 ### Basic Diff
 
 ```python
-import diffx_python as diffx
+import diffx
 
 old = {"name": "Alice", "age": 30}
 new = {"name": "Alice", "age": 31, "city": "Tokyo"}
@@ -59,7 +59,7 @@ results = diffx.diff(data1, data2,
 Parse various formats to Python objects:
 
 ```python
-import diffx_python as diffx
+import diffx
 
 json_obj = diffx.parse_json('{"name": "Alice"}')
 yaml_obj = diffx.parse_yaml('name: Alice\nage: 30')
@@ -72,7 +72,7 @@ xml_obj = diffx.parse_xml('<user><name>Alice</name></user>')
 ### Format Output
 
 ```python
-import diffx_python as diffx
+import diffx
 
 results = diffx.diff(old, new)
 print(diffx.format_output(results, 'json'))   # JSON format
@@ -83,7 +83,7 @@ print(diffx.format_output(results, 'diffx'))  # diffx format
 ### File Comparison
 
 ```python
-import diffx_python as diffx
+import diffx
 
 # Compare files (auto-detects format from extension)
 results = diffx.diff_files('old.json', 'new.json')
